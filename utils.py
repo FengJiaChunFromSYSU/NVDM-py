@@ -1,5 +1,8 @@
+import pprint
 import cPickle
 import numpy as np
+
+pp = pprint.PrettyPrinter()
 
 def save_pkl(path, obj):
   with open(path, 'w') as f:

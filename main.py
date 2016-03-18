@@ -2,6 +2,7 @@ import os
 import numpy as np
 import tensorflow as tf
 
+from utils import pp
 from models import NVDM, NASM
 from reader import TextReader
 
@@ -13,7 +14,7 @@ flags.DEFINE_string("dataset", "ptb", "The name of dataset [ptb]")
 flags.DEFINE_string("model", "nvdm", "The name of model [nvdm, nasm]")
 flags.DEFINE_string("checkpoint_dir", "checkpoint", "Directory name to save the checkpoints [checkpoints]")
 flags.DEFINE_string("sample_dir", "samples", "Directory name to save the image samples [samples]")
-flags.DEFINE_boolean("is_train", False, "True for training, False for testing [False]")
+flags.DEFINE_boolean("is_forward", False, "False for training, True for testing [False]")
 FLAGS = flags.FLAGS
 
 MODELS = {
@@ -31,10 +32,10 @@ def main(_):
     m = MODELS[FLAGS.model]
     model = m(sess, reader)
 
-    if FLAGS.is_train:
-      model.train(FLAGS)
-    else:
+    if FLAGS.is_forward:
       model.load(FLAGS.checkpoint_dir)
+    else:
+      model.train(FLAGS)
 
   if not os.path.exists(FLAGS.sample_dir):
     os.makedirs(FLAGS.sample_dir)
