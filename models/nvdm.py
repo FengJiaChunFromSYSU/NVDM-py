@@ -105,16 +105,21 @@ class NVDM(Model):
         print("Step: [%4d/%4d] time: %4.4f, loss: %.8f, e_loss: %.8f, g_loss: %.8f" \
             % (step, self.max_iter, time.time() - start_time, loss, e_loss, g_loss))
 
-      if step % 100 == 0:
-        self.sample(5)
-
       if step % 500 == 0:
+        self.sample(3, "insurance costs")
+        self.sample(3, "chemical company")
+        self.sample(3, "government violated")
+
         self.save(self.checkpoint_dir, step)
 
-  def sample(self, sample_size=20):
+  def sample(self, sample_size=20, text=None):
     """Sample the documents."""
     p = 1
-    x, word_idxs = self.reader.random()
+
+    if text != None:
+      x, word_idxs = self.reader.get(text)
+    else:
+      x, word_idxs = self.reader.random()
     print " ".join([self.reader.idx2word[word_idx] for word_idx in word_idxs])
 
     for idx in xrange(sample_size):
