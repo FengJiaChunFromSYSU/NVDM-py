@@ -39,6 +39,7 @@ class NVDM(Model):
 
   def build_model(self):
     self.x = tf.placeholder(tf.float32, [self.reader.vocab_size], name="input")
+    self.x_idx = tf.placeholder(tf.int32, [None], name="x_idx")
 
     self.build_encoder()
     self.build_decoder()
@@ -47,7 +48,7 @@ class NVDM(Model):
     self.e_loss = -0.5 * tf.reduce_sum(1 + self.log_sigma_sq - tf.square(self.mu) - tf.exp(self.log_sigma_sq))
 
     # Log likelihood
-    self.g_loss = -tf.reduce_sum(tf.log(self.p_x_i + 1e-10))
+    self.g_loss = -tf.reduce_sum(tf.log(tf.gather(self.p_x_i, self.x_idx) + 1e-10))
 
     self.loss = self.e_loss + self.g_loss
 
@@ -104,13 +105,16 @@ class NVDM(Model):
 
     iterator = self.reader.next_batch()
     for step in xrange(start_iter, start_iter + self.max_iter):
-      x = iterator.next()
+      x, x_idx = iterator.next()
 
       _, e_loss, mu, sigma = self.sess.run(
           [self.optim_e, self.e_loss, self.mu, self.sigma], feed_dict={self.x: x})
 
       _, g_loss, summary_str = self.sess.run(
-          [self.optim_g, self.g_loss, merged_sum], feed_dict={self.mu: mu, self.sigma: sigma, self.e_loss: e_loss})
+          [self.optim_g, self.g_loss, merged_sum], feed_dict={self.mu: mu,
+                                                              self.sigma: sigma,
+                                                              self.e_loss: e_loss,
+                                                              self.x_idx: x_idx})
 
       if step % 2 == 0:
         writer.add_summary(summary_str, step)
@@ -122,7 +126,7 @@ class NVDM(Model):
       if step % 500 == 0:
         self.save(self.checkpoint_dir, step)
 
-        self.sample(3, "insurance costs")
+        self.sample(3, "costs")
         self.sample(3, "chemical company")
         self.sample(3, "government violated")
 

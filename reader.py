@@ -67,10 +67,12 @@ class TextReader(object):
     idx = 0
     while True:
       try:
-        yield np.bincount(raw_data[self.batch_size*idx:self.batch_size*(idx+1)], minlength=self.vocab_size)
+        data = raw_data[self.batch_size*idx:self.batch_size*(idx+1)]
+        yield np.bincount(data, minlength=self.vocab_size), data
       except:
         idx = 0
-        yield np.bincount(raw_data[self.batch_size*idx:self.batch_size*(idx+1)], minlength=self.vocab_size)
+        data = raw_data[self.batch_size*idx:self.batch_size*(idx+1)]
+        yield np.bincount(data, minlength=self.vocab_size), data
 
   def get(self, text=["medical"]):
     if type(text) == str:
