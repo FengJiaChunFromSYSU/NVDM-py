@@ -50,7 +50,7 @@ class NVDM(Model):
     self.g_loss = -tf.reduce_sum(tf.log(self.p_x_i + 1e-10))
 
     self.loss = tf.reduce_mean(self.e_loss + self.g_loss)
-    self.optim = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.loss)
+    self.optim = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.loss, global_step=self.step)
 
     _ = tf.scalar_summary("encoder loss", self.e_loss)
     _ = tf.scalar_summary("decoder loss", self.g_loss)
@@ -121,7 +121,7 @@ class NVDM(Model):
       cur_ps = self.sess.run([self.p_x_i], feed_dict={self.x: x})
       cur_p, word_idx = np.max(cur_ps), np.argmax(cur_ps)
 
-      print("[%d] %s\t\t: %.8f" % (idx+1, self.reader.idx2word[word_idx], cur_p))
+      print("[%d] %-20s: %.8f" % (idx+1, self.reader.idx2word[word_idx], cur_p))
       p *= cur_p
 
     print("perplexity : %8.f" % -np.log(p))
