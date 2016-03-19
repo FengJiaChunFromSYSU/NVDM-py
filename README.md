@@ -1,7 +1,7 @@
 Neural Variational Document Model
 =================================
 
-Tensorflow implementation of [Neural Variational Inference for Text Processing](http://arxiv.org/abs/1511.06038). Only NVDM (Neural Variational Document Model) is implemented.
+Tensorflow implementation of [Neural Variational Inference for Text Processing](http://arxiv.org/abs/1511.06038).
 
 ![model_demo](./assets/model.png)
 

@@ -32,6 +32,7 @@ class NASM(Model):
     self.dataset="ptb"
     self._attrs=["batch_size", "num_steps", "embed_dim", "h_dim", "learning_rate"]
 
+    raise Exception(" [!] Working in progress")
     self.build_model()
 
   def build_model(self):
