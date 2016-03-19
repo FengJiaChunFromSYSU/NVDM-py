@@ -23,6 +23,8 @@ class TextReader(object):
       self.valid_data = self._file_to_data(valid_path)
       self.test_data = self._file_to_data(test_path)
 
+    self.vocab_size = len(self.vocab)
+
   def _read_text(self, file_path):
     with open(file_path) as f:
       return f.read().replace("\n", "<eos>").split()
@@ -60,18 +62,7 @@ class TextReader(object):
     else:
       raise Exception(" [!] Unkown data type %s: %s" % data_type)
 
-    batch_cnt = len(raw_data) // self.batch_size
-    data = np.zeros([batch_cnt, batch_size], dtype=np.int32)
+    self.batch_cnt = len(raw_data) // self.batch_size
 
-    for idx in range(batch_cnt):
-      data[idx] = raw_data[batch_size*idx:batch_size*(idx+1)]
-
-    epoch_size = (batch_size - 1) // self.num_steps
-
-    if epoch_size == 0:
-      raise ValueError("epoch_size == 0, decrease batch_cnt or self.num_steps")
-
-    for idx in range(epoch_size):
-      x = data[:, idx*self.num_steps:(idx+1)*self.num_steps]
-      y = data[:, idx*self.num_steps+1:(idx+1)*self.num_steps+1]
-      yield (x, y)
+    for idx in range(self.batch_cnt):
+      yield np.bincount(raw_data[self.batch_size*idx:self.batch_size*(idx+1)], minlength=self.vocab_size)
