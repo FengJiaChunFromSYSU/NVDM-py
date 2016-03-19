@@ -8,7 +8,7 @@ class NVDM(Model):
 
   def __init__(self, sess, reader, dataset="ptb",
                batch_size=20, num_steps=3, embed_dim=500,
-               h_dim=50, learning_rate=0.01, epoch=50,
+               h_dim=50, learning_rate=0.01, max_epoch=50,
                checkpoint_dir="checkpoint"):
     """Initialize Neural Varational Document Model.
 
@@ -24,13 +24,15 @@ class NVDM(Model):
     self.h_dim = h_dim
     self.embed_dim = embed_dim
 
-    self.epoch = epoch
+    self.max_epoch = max_epoch
     self.batch_size = batch_size
     self.learning_rate = learning_rate
     self.checkpoint_dir = checkpoint_dir
 
-    self.dataset="ptb"
-    self._attrs=["batch_size", "num_steps", "embed_dim", "h_dim", "learning_rate"]
+    self.step = tf.Variable(0, trainable=False)  
+
+    self.dataset = "ptb"
+    self._attrs = ["h_dim", "embed_dim", "max_epoch", "batch_size", "num_steps", "learning_rate"]
 
     self.build_model()
 
@@ -82,15 +84,16 @@ class NVDM(Model):
       self.p_x_i = tf.squeeze(tf.nn.softmax(e))
 
   def train(self, config):
-    start_time = time.time()
-
     merged_sum = tf.merge_all_summaries()
-    writer = tf.train.SummaryWriter("./logs", self.sess.graph_def)
+    writer = tf.train.SummaryWriter("./logs/%s" % self.get_model_dir(), self.sess.graph_def)
 
     tf.initialize_all_variables().run()
     self.load(self.checkpoint_dir)
 
-    for epoch in range(self.epoch):
+    start_time = time.time()
+    start_iter = self.step.eval()
+
+    for epoch in xrange(start_iter, start_iter + self.max_epoch):
       epoch_loss = 0.
 
       for idx, x in enumerate(self.reader.next_batch()):
@@ -103,10 +106,10 @@ class NVDM(Model):
               % (epoch, idx, self.reader.batch_cnt, time.time() - start_time, loss, e_loss, g_loss))
 
         if idx % 2 == 0:
-          writer.add_summary(summary_str, step)
+          writer.add_summary(summary_str, idx)
 
         if idx != 0 and idx % 1000 == 0:
-          self.save(self.checkpoint_dir, step)
+          self.save(self.checkpoint_dir, epoch)
 
   def sample(self, sample_size=10):
     """Sample the documents."""
