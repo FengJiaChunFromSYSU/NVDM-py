@@ -94,16 +94,19 @@ class NVDM(Model):
       epoch_loss = 0.
 
       for idx, x in enumerate(self.reader.next_batch()):
-        _, loss, e_loss, g_loss = self.sess.run(
-            [self.optim, self.loss, self.e_loss, self.g_loss], feed_dict={self.x: x})
+        _, loss, e_loss, g_loss, summary_str = self.sess.run(
+            [self.optim, self.loss, self.e_loss, self.g_loss, merged_sum], feed_dict={self.x: x})
 
         epoch_loss += loss
         if idx % 10 == 0:
           print("Epoch: [%2d] [%4d/%4d] time: %4.4f, loss: %.8f, e_loss: %.8f, g_loss: %.8f" \
               % (epoch, idx, self.reader.batch_cnt, time.time() - start_time, loss, e_loss, g_loss))
 
+        if idx % 2 == 0:
+          writer.add_summary(summary_str, step)
+
         if idx != 0 and idx % 1000 == 0:
-          self.save(checkpoint_dir, step)
+          self.save(self.checkpoint_dir, step)
 
   def sample(self, sample_size=10):
     """Sample the documents."""
