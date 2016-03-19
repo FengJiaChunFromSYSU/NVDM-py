@@ -10,6 +10,7 @@ Prerequisites
 -------------
 
 - Python 2.7 or Python 3.3+
+- [NLTK](http://www.nltk.org/)
 - [Tensorflow](https://www.tensorflow.org/)
 
 

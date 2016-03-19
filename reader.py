@@ -4,6 +4,7 @@ import tensorflow as tf
 
 from utils import *
 from collections import Counter
+from nltk.tokenize import TreebankWordTokenizer
 
 class TextReader(object):
   def __init__(self, data_path, batch_size, num_steps=1):
@@ -71,9 +72,20 @@ class TextReader(object):
         idx = 0
         yield np.bincount(raw_data[self.batch_size*idx:self.batch_size*(idx+1)], minlength=self.vocab_size)
 
-  def get(self, text="medical"):
-    data = np.array(map(self.vocab.get, text.split()))
-    return np.bincount(data, minlength=self.vocab_size), data
+  def get(self, text=["medical"]):
+    if type(text) == str:
+      text = text.lower()
+      text = TreebankWordTokenizer().tokenize(text)
+
+    try:
+      data = np.array(map(self.vocab.get, text))
+      return np.bincount(data, minlength=self.vocab_size), data
+    except:
+      unknowns = []
+      for word in text:
+        if self.vocab.get(word) == None:
+          unknowns.append(word)
+      raise Exception(" [!] unknown words: %s" % ",".join(unknowns))
 
   def random(self, data_type="train"):
     if data_type == "train":

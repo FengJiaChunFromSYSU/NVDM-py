@@ -131,16 +131,20 @@ class NVDM(Model):
     p = 1
 
     if text != None:
-      x, word_idxs = self.reader.get(text)
+      try:
+        x, word_idxs = self.reader.get(text)
+      except Exception as e:
+        print(e)
+        return
     else:
       x, word_idxs = self.reader.random()
-    print " ".join([self.reader.idx2word[word_idx] for word_idx in word_idxs])
+    print(" [*] Text: %s" % " ".join([self.reader.idx2word[word_idx] for word_idx in word_idxs]))
 
     for idx in xrange(sample_size):
       cur_ps = self.sess.run([self.p_x_i], feed_dict={self.x: x})
       cur_p, word_idx = np.max(cur_ps), np.argmax(cur_ps)
 
-      print("[%d] %-20s: %.8f" % (idx+1, self.reader.idx2word[word_idx], cur_p))
+      print("  [%d] %-20s: %.8f" % (idx+1, self.reader.idx2word[word_idx], cur_p))
       p *= cur_p
 
-    print("perplexity : %8.f" % -np.log(p))
+    print(" [*] perplexity : %8.f" % -np.log(p))

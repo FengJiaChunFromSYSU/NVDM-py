@@ -14,7 +14,7 @@ flags.DEFINE_string("dataset", "ptb", "The name of dataset [ptb]")
 flags.DEFINE_string("model", "nvdm", "The name of model [nvdm, nasm]")
 flags.DEFINE_string("checkpoint_dir", "checkpoint", "Directory name to save the checkpoints [checkpoints]")
 flags.DEFINE_string("sample_dir", "samples", "Directory name to save the image samples [samples]")
-flags.DEFINE_boolean("is_forward", False, "False for training, True for testing [False]")
+flags.DEFINE_boolean("forward_only", False, "False for training, True for testing [False]")
 FLAGS = flags.FLAGS
 
 MODELS = {
@@ -32,12 +32,14 @@ def main(_):
     m = MODELS[FLAGS.model]
     model = m(sess, reader)
 
-    if FLAGS.is_forward:
+    if FLAGS.forward_only:
       model.load(FLAGS.checkpoint_dir)
     else:
       model.train(FLAGS)
 
-    model.sample()
+    while True:
+      text = raw_input(" [*] Enter text to test: ")
+      model.sample(5, text)
 
 if __name__ == '__main__':
   tf.app.run()
