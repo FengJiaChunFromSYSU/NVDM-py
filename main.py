@@ -37,8 +37,7 @@ def main(_):
     else:
       model.train(FLAGS)
 
-  if not os.path.exists(FLAGS.sample_dir):
-    os.makedirs(FLAGS.sample_dir)
+    model.sample()
 
 if __name__ == '__main__':
   tf.app.run()

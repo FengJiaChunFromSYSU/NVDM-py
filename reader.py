@@ -23,6 +23,7 @@ class TextReader(object):
       self.valid_data = self._file_to_data(valid_path)
       self.test_data = self._file_to_data(test_path)
 
+    self.idx2word = {v:k for k, v in self.vocab.items()}
     self.vocab_size = len(self.vocab)
 
   def _read_text(self, file_path):
@@ -62,10 +63,13 @@ class TextReader(object):
     else:
       raise Exception(" [!] Unkown data type %s: %s" % data_type)
 
-    self.batch_cnt = len(raw_data) // self.batch_size
-
-    for idx in range(self.batch_cnt):
-      yield np.bincount(raw_data[self.batch_size*idx:self.batch_size*(idx+1)], minlength=self.vocab_size)
+    idx = 0
+    while True:
+      try:
+        yield np.bincount(raw_data[self.batch_size*idx:self.batch_size*(idx+1)], minlength=self.vocab_size)
+      except:
+        idx = 0
+        yield np.bincount(raw_data[self.batch_size*idx:self.batch_size*(idx+1)], minlength=self.vocab_size)
 
   def random(self, data_type="train"):
     if data_type == "train":

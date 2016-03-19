@@ -1,4 +1,5 @@
 import time
+import numpy as np
 import tensorflow as tf
 
 from base import Model
@@ -8,7 +9,7 @@ class NVDM(Model):
 
   def __init__(self, sess, reader, dataset="ptb",
                batch_size=20, num_steps=3, embed_dim=500,
-               h_dim=50, learning_rate=0.01, epoch=50,
+               h_dim=50, learning_rate=0.01, max_iter=450000,
                checkpoint_dir="checkpoint"):
     """Initialize Neural Varational Document Model.
 
@@ -24,13 +25,15 @@ class NVDM(Model):
     self.h_dim = h_dim
     self.embed_dim = embed_dim
 
-    self.epoch = epoch
+    self.max_iter = max_iter
     self.batch_size = batch_size
     self.learning_rate = learning_rate
     self.checkpoint_dir = checkpoint_dir
 
-    self.dataset="ptb"
-    self._attrs=["batch_size", "num_steps", "embed_dim", "h_dim", "learning_rate"]
+    self.step = tf.Variable(0, trainable=False)  
+
+    self.dataset = "ptb"
+    self._attrs = ["h_dim", "embed_dim", "max_iter", "batch_size", "num_steps", "learning_rate"]
 
     self.build_model()
 
@@ -82,43 +85,43 @@ class NVDM(Model):
       self.p_x_i = tf.squeeze(tf.nn.softmax(e))
 
   def train(self, config):
-    start_time = time.time()
-
     merged_sum = tf.merge_all_summaries()
-    writer = tf.train.SummaryWriter("./logs", self.sess.graph_def)
+    writer = tf.train.SummaryWriter("./logs/%s" % self.get_model_dir(), self.sess.graph_def)
 
     tf.initialize_all_variables().run()
     self.load(self.checkpoint_dir)
 
-    for epoch in range(self.epoch):
-      epoch_loss = 0.
+    start_time = time.time()
+    start_iter = self.step.eval()
 
-      for idx, x in enumerate(self.reader.next_batch()):
-        _, loss, e_loss, g_loss, summary_str = self.sess.run(
-            [self.optim, self.loss, self.e_loss, self.g_loss, merged_sum], feed_dict={self.x: x})
+    iterator = self.reader.next_batch()
+    for step in xrange(start_iter, start_iter + self.max_iter):
+      x = iterator.next()
 
-        epoch_loss += loss
-        if idx % 10 == 0:
-          print("Epoch: [%2d] [%4d/%4d] time: %4.4f, loss: %.8f, e_loss: %.8f, g_loss: %.8f" \
-              % (epoch, idx, self.reader.batch_cnt, time.time() - start_time, loss, e_loss, g_loss))
+      _, loss, e_loss, g_loss, summary_str = self.sess.run(
+          [self.optim, self.loss, self.e_loss, self.g_loss, merged_sum], feed_dict={self.x: x})
 
-        if idx % 2 == 0:
-          writer.add_summary(summary_str, step)
+      if step % 2 == 0:
+        writer.add_summary(summary_str, step)
 
-        if idx % 1000 == 0:
-          self.save(self.checkpoint_dir, step)
+      if step % 10 == 0:
+        print("Step: [%4d/%4d] time: %4.4f, loss: %.8f, e_loss: %.8f, g_loss: %.8f" \
+            % (step, self.max_iter, time.time() - start_time, loss, e_loss, g_loss))
 
-  def sample(self, sample_size=10):
+      if step % 1000 == 0:
+        self.save(self.checkpoint_dir, step)
+
+  def sample(self):
     """Sample the documents."""
     p = 1
     x, word_idxs = self.reader.random()
-    print " ".join([self.reader.vocab[word_idx] for word_idx in word_idxs])
+    print " ".join([self.reader.idx2word[word_idx] for word_idx in word_idxs])
 
     for idx in xrange(20):
       cur_ps = self.sess.run([self.p_x_i], feed_dict={self.x: x})
       cur_p, word_idx = np.max(cur_ps), np.argmax(cur_ps)
 
-      print self.reader.vocab[word_idx], cur_p
+      print self.reader.idx2word[word_idx], cur_p
       p *= cur_p
 
     print("perplexity : %8.f" % np.log(p))
