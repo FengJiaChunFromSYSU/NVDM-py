@@ -43,8 +43,8 @@ class NVDM(Model):
     # Kullback Leibler divergence
     self.e_loss = -0.5 * tf.reduce_sum(1 + self.log_sigma_sq - tf.square(self.mu) - tf.exp(self.log_sigma_sq))
 
-    # log likelihood
-    self.g_loss = tf.reduce_sum(tf.log(self.p_x_i))
+    # Log likelihood
+    self.g_loss = tf.reduce_sum(tf.log(self.p_x_i + 1e-10))
 
     self.loss = tf.reduce_mean(self.e_loss + self.g_loss)
     self.optim = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(-self.loss)
@@ -105,11 +105,20 @@ class NVDM(Model):
         if idx % 2 == 0:
           writer.add_summary(summary_str, step)
 
-        if idx != 0 and idx % 1000 == 0:
+        if idx % 1000 == 0:
           self.save(self.checkpoint_dir, step)
 
   def sample(self, sample_size=10):
     """Sample the documents."""
-    sample_h = np.random.uniform(-1, 1, size=(self.sample_size , self.h_dim))
+    p = 1
+    x, word_idxs = self.reader.random()
+    print " ".join([self.reader.vocab[word_idx] for word_idx in word_idxs])
 
-    _, = self.sess.run([self.p_x_i], feed_dict={self.x: x})
+    for idx in xrange(20):
+      cur_ps = self.sess.run([self.p_x_i], feed_dict={self.x: x})
+      cur_p, word_idx = np.max(cur_ps), np.argmax(cur_ps)
+
+      print self.reader.vocab[word_idx], cur_p
+      p *= cur_p
+
+    print("perplexity : %8.f" % np.log(p))

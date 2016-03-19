@@ -66,3 +66,19 @@ class TextReader(object):
 
     for idx in range(self.batch_cnt):
       yield np.bincount(raw_data[self.batch_size*idx:self.batch_size*(idx+1)], minlength=self.vocab_size)
+
+  def random(self, data_type="train"):
+    if data_type == "train":
+      raw_data = self.train_data
+    elif data_type == "valid":
+      raw_data = self.valid_data
+    elif data_type == "test":
+      raw_data = self.test_data
+    else:
+      raise Exception(" [!] Unkown data type %s: %s" % data_type)
+
+    self.batch_cnt = len(raw_data) // self.batch_size
+
+    idx = np.random.randint(self.batch_cnt)
+    return np.bincount(raw_data[self.batch_size*idx:self.batch_size*(idx+1)], minlength=self.vocab_size), \
+           raw_data[self.batch_size*idx:self.batch_size*(idx+1)]
