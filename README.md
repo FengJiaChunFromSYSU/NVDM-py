@@ -29,7 +29,7 @@ To test an existing model:
 Results
 -------
 
-![ptb_h_dim:50_embed_dim:500_max_iter:450000_batch_size:20_learning_rate:0.001](training-2016-03-20.png)
+![ptb_h_dim:50_embed_dim:500_max_iter:450000_batch_size:20_learning_rate:0.001](./assets/training-2016-03-20.png)
 
 Author
 ------
