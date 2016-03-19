@@ -49,12 +49,23 @@ class NVDM(Model):
     # Log likelihood
     self.g_loss = -tf.reduce_sum(tf.log(self.p_x_i + 1e-10))
 
-    self.loss = tf.reduce_mean(self.e_loss + self.g_loss)
-    self.optim = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.loss, global_step=self.step)
+    self.loss = self.e_loss + self.g_loss
+
+    encoder_var_list, decoder_var_list = [], []
+    for var in tf.trainable_variables():
+      if "encoder" in var.name:
+        encoder_var_list.append(var)
+      elif "decoder" in var.name:
+        decoder_var_list.append(var)
+
+    self.optim_e = tf.train.AdamOptimizer(learning_rate=self.learning_rate) \
+                         .minimize(self.e_loss, global_step=self.step, var_list=encoder_var_list)
+    self.optim_g = tf.train.AdamOptimizer(learning_rate=self.learning_rate) \
+                         .minimize(self.g_loss, global_step=self.step, var_list=decoder_var_list)
 
     _ = tf.scalar_summary("encoder loss", self.e_loss)
     _ = tf.scalar_summary("decoder loss", self.g_loss)
-    _ = tf.scalar_summary("loss", self.loss)
+    _ = tf.scalar_summary("total loss", self.loss)
 
   def build_encoder(self):
     """Inference Network. q(h|X)"""
@@ -66,9 +77,9 @@ class NVDM(Model):
       self.log_sigma_sq = tf.nn.rnn_cell.linear(l2, self.h_dim, bias=True, scope="log_sigma_sq")
 
       eps = tf.random_normal((1, self.h_dim), 0, 1, dtype=tf.float32)
-      sigma = tf.sqrt(tf.exp(self.log_sigma_sq))
+      self.sigma = tf.sqrt(tf.exp(self.log_sigma_sq))
 
-      self.h = self.mu + sigma * eps
+      self.h = self.mu + self.sigma * eps
 
   def build_decoder(self):
     """Inference Network. p(X|h)"""
@@ -95,22 +106,25 @@ class NVDM(Model):
     for step in xrange(start_iter, start_iter + self.max_iter):
       x = iterator.next()
 
-      _, loss, e_loss, g_loss, summary_str = self.sess.run(
-          [self.optim, self.loss, self.e_loss, self.g_loss, merged_sum], feed_dict={self.x: x})
+      _, e_loss, mu, sigma = self.sess.run(
+          [self.optim_e, self.e_loss, self.mu, self.sigma], feed_dict={self.x: x})
+
+      _, g_loss, summary_str = self.sess.run(
+          [self.optim_g, self.g_loss, merged_sum], feed_dict={self.mu: mu, self.sigma: sigma, self.e_loss: e_loss})
 
       if step % 2 == 0:
         writer.add_summary(summary_str, step)
 
       if step % 10 == 0:
         print("Step: [%4d/%4d] time: %4.4f, loss: %.8f, e_loss: %.8f, g_loss: %.8f" \
-            % (step, self.max_iter, time.time() - start_time, loss, e_loss, g_loss))
+            % (step, self.max_iter, time.time() - start_time, e_loss + g_loss, e_loss, g_loss))
 
       if step % 500 == 0:
+        self.save(self.checkpoint_dir, step)
+
         self.sample(3, "insurance costs")
         self.sample(3, "chemical company")
         self.sample(3, "government violated")
-
-        self.save(self.checkpoint_dir, step)
 
   def sample(self, sample_size=20, text=None):
     """Sample the documents."""

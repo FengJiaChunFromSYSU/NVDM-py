@@ -72,7 +72,8 @@ class TextReader(object):
         yield np.bincount(raw_data[self.batch_size*idx:self.batch_size*(idx+1)], minlength=self.vocab_size)
 
   def get(self, text="medical"):
-    data = np.array(map(self.vocab.get, text))
+    data = np.array(map(self.vocab.get, text.split()))
+    return np.bincount(data, minlength=self.vocab_size), data
 
   def random(self, data_type="train"):
     if data_type == "train":
