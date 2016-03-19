@@ -147,4 +147,4 @@ class NVDM(Model):
       print("  [%d] %-20s: %.8f" % (idx+1, self.reader.idx2word[word_idx], cur_p))
       p *= cur_p
 
-    print(" [*] perplexity : %8.f" % -np.log(p))
+    print(" [*] perp : %8.f" % -np.log(p))

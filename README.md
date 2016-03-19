@@ -11,7 +11,7 @@ Prerequisites
 
 - Python 2.7 or Python 3.3+
 - [NLTK](http://www.nltk.org/)
-- [Tensorflow](https://www.tensorflow.org/)
+- [TensorFlow](https://www.tensorflow.org/)
 
 
 Usage
@@ -29,7 +29,7 @@ To test an existing model:
 Results
 -------
 
-(in progress)
+![ptb_h_dim:50_embed_dim:500_max_iter:450000_batch_size:20_learning_rate:0.001](training-2016-03-20.png)
 
 Author
 ------
