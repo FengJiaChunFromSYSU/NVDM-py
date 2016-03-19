@@ -41,13 +41,13 @@ class NVDM(Model):
     self.build_decoder()
 
     # Kullback Leibler divergence
-    self.e_loss = -0.5 * tf.reduce_sum(self.h_dim + self.log_sigma_sq - tf.square(self.mu) - tf.exp(self.log_sigma_sq))
+    self.e_loss = -0.5 * tf.reduce_sum(1 + self.log_sigma_sq - tf.square(self.mu) - tf.exp(self.log_sigma_sq))
 
     # log likelihood
     self.g_loss = tf.reduce_sum(tf.log(self.p_x_i))
 
     self.loss = tf.reduce_mean(self.e_loss + self.g_loss)
-    self.optim = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.loss)
+    self.optim = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(-self.loss)
 
     _ = tf.scalar_summary("encoder loss", self.e_loss)
     _ = tf.scalar_summary("decoder loss", self.g_loss)
@@ -102,8 +102,11 @@ class NVDM(Model):
           print("Epoch: [%2d] [%4d/%4d] time: %4.4f, loss: %.8f, e_loss: %.8f, g_loss: %.8f" \
               % (epoch, idx, self.reader.batch_cnt, time.time() - start_time, loss, e_loss, g_loss))
 
+        if idx != 0 and idx % 1000 == 0:
+          self.save(checkpoint_dir, step)
+
   def sample(self, sample_size=10):
     """Sample the documents."""
     sample_h = np.random.uniform(-1, 1, size=(self.sample_size , self.h_dim))
 
-    p_X_h = p_x_h.run(feed_dict={self.h: sample_h})
+    _, = self.sess.run([self.p_x_i], feed_dict={self.x: x})
