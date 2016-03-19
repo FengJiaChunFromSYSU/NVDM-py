@@ -33,13 +33,13 @@ class NVDM(Model):
 
   def build_encoder(self):
     """Inference Network. q(h|X)"""
-    lambda_ = tf.nn.relu(tf.nn.rnn_cell.linear(self.input_, self.embed_dim, bias=True))
-    phi = tf.nn.relu(tf.nn.rnn_cell.linear(lambda_, self.embed_dim, bias=True))
+    l1 = tf.nn.relu(tf.nn.rnn_cell.linear(self.input_, self.embed_dim, bias=True))
+    l2 = tf.nn.relu(tf.nn.rnn_cell.linear(l1, self.embed_dim, bias=True))
 
-    self.mu = tf.nn.rnn_cell.linear(phi, self.h_dim, bias=True)
-    self.sigma = tf.exp(tf.rnn_cell.linear(phi, self.h_dim, bias=True))
+    self.mu = tf.nn.rnn_cell.linear(l2, self.h_dim, bias=True)
+    self.sigma = tf.exp(tf.rnn_cell.linear(l2, self.h_dim, bias=True))
+
     eps = tf.random_normal((self.batch_size, self.h_dim), 0, 1, dtype=tf.float32)
-
     self.h = self.mu + self.sigma * eps
 
   def build_decoder(self):
