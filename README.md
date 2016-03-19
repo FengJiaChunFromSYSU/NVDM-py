@@ -24,8 +24,11 @@ To test an existing model:
 
     $ python main.py --dataset ptb --forward_only True
 
-(In progress)
 
+Results
+-------
+
+(in progress)
 
 Author
 ------
