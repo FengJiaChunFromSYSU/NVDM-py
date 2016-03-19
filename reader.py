@@ -73,6 +73,7 @@ class TextReader(object):
         idx = 0
         data = raw_data[self.batch_size*idx:self.batch_size*(idx+1)]
         yield np.bincount(data, minlength=self.vocab_size), data
+      idx += 1
 
   def get(self, text=["medical"]):
     if type(text) == str:
