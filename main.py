@@ -7,13 +7,14 @@ from models import NVDM, NASM
 from reader import TextReader
 
 flags = tf.app.flags
-flags.DEFINE_integer("epoch", 25, "Epoch to train [25]")
-flags.DEFINE_float("learning_rate", 0.0002, "Learning rate of for adam [0.0002]")
-flags.DEFINE_integer("batch_size", 64, "The size of batch images [64]")
+flags.DEFINE_integer("max_iter", 450000, "Maximum of iteration [450000]")
+flags.DEFINE_float("learning_rate", 0.001, "Learning rate of for adam [0.001]")
+flags.DEFINE_integer("batch_size", 20, "The size of batch images [20]")
+flags.DEFINE_integer("embed_dim", 500, "The dimension of word embeddings [500]")
+flags.DEFINE_integer("h_dim", 50, "The dimension of latent variable [50]")
 flags.DEFINE_string("dataset", "ptb", "The name of dataset [ptb]")
 flags.DEFINE_string("model", "nvdm", "The name of model [nvdm, nasm]")
 flags.DEFINE_string("checkpoint_dir", "checkpoint", "Directory name to save the checkpoints [checkpoints]")
-flags.DEFINE_string("sample_dir", "samples", "Directory name to save the image samples [samples]")
 flags.DEFINE_boolean("forward_only", False, "False for training, True for testing [False]")
 FLAGS = flags.FLAGS
 
@@ -30,7 +31,10 @@ def main(_):
 
   with tf.Session() as sess:
     m = MODELS[FLAGS.model]
-    model = m(sess, reader)
+    model = m(sess, reader, dataset=FLAGS.dataset,
+              batch_size=FLAGS.batch_size, embed_dim=FLAGS.embed_dim, h_dim=FLAGS.h_dim,
+              learning_rate=FLAGS.learning_rate, max_iter=FLAGS.max_iter,
+              checkpoint_dir=FLAGS.checkpoint_dir)
 
     if FLAGS.forward_only:
       model.load(FLAGS.checkpoint_dir)
