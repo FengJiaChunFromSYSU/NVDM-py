@@ -7,10 +7,12 @@ from models import NVDM, NASM
 from reader import TextReader
 
 flags = tf.app.flags
+flags.DEFINE_float("learning_rate", 0.001, "Learning rate of adam optimizer [0.001]")
+flags.DEFINE_float("decay_rate", 0.96, "Decay rate of learning rate [0.96]")
+flags.DEFINE_float("decay_step", 10000, "# of decay step for learning rate decaying [10000]")
 flags.DEFINE_integer("max_iter", 450000, "Maximum of iteration [450000]")
-flags.DEFINE_float("learning_rate", 0.001, "Learning rate of for adam [0.001]")
-flags.DEFINE_integer("embed_dim", 500, "The dimension of word embeddings [500]")
 flags.DEFINE_integer("h_dim", 50, "The dimension of latent variable [50]")
+flags.DEFINE_integer("embed_dim", 500, "The dimension of word embeddings [500]")
 flags.DEFINE_string("dataset", "ptb", "The name of dataset [ptb]")
 flags.DEFINE_string("model", "nvdm", "The name of model [nvdm, nasm]")
 flags.DEFINE_string("checkpoint_dir", "checkpoint", "Directory name to save the checkpoints [checkpoints]")

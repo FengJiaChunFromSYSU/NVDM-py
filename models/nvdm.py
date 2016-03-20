@@ -10,8 +10,9 @@ class NVDM(Model):
   """Neural Varational Document Model"""
 
   def __init__(self, sess, reader, dataset="ptb",
-               embed_dim=500, h_dim=50, learning_rate=0.001,
-               max_iter=450000, checkpoint_dir="checkpoint"):
+               decay_rate=0.96, decay_step=10000, embed_dim=500,
+               h_dim=50, learning_rate=0.001, max_iter=450000,
+               checkpoint_dir="checkpoint"):
     """Initialize Neural Varational Document Model.
 
     params:
@@ -27,13 +28,16 @@ class NVDM(Model):
     self.embed_dim = embed_dim
 
     self.max_iter = max_iter
-    self.learning_rate = learning_rate
+    self.decay_rate = decay_rate
     self.checkpoint_dir = checkpoint_dir
-
     self.step = tf.Variable(0, trainable=False)  
+    self.learning_rate = tf.train.exponential_decay(
+        learning_rate, self.step, 10000, decay_rate, staircase=True, name="lr")
+
+    _ = tf.scalar_summary("learning rate", self.learning_rate)
 
     self.dataset = dataset
-    self._attrs = ["h_dim", "embed_dim", "max_iter", "learning_rate", "dataset"]
+    self._attrs = ["h_dim", "embed_dim", "max_iter", "learning_rate", "dataset", "decay_rate"]
 
     self.build_model()
 
