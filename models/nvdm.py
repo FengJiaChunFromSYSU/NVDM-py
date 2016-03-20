@@ -117,11 +117,12 @@ class NVDM(Model):
     for step in xrange(start_iter, start_iter + self.max_iter):
       x, x_idx = iterator.next()
 
-      _, e_loss, mu, sigma = self.sess.run(
-          [self.optim_e, self.e_loss, self.mu, self.sigma], feed_dict={self.x: x})
+      _, e_loss, mu, sigma, h = self.sess.run(
+          [self.optim_e, self.e_loss, self.mu, self.sigma, self.h], feed_dict={self.x: x})
 
       _, g_loss, summary_str = self.sess.run(
-          [self.optim_g, self.g_loss, merged_sum], feed_dict={self.mu: mu,
+          [self.optim_g, self.g_loss, merged_sum], feed_dict={self.h: h,
+                                                              self.mu: mu,
                                                               self.sigma: sigma,
                                                               self.e_loss: e_loss,
                                                               self.x_idx: x_idx})
