@@ -5,6 +5,15 @@ Tensorflow implementation of [Neural Variational Inference for Text Processing](
 
 ![model_demo](./assets/model.png)
 
+This implementation contains:
+
+1. Neural Variational Document Model
+    - Variational inference framework for generative model of text
+    - Combines a stochastic document representation with a bag-of-words generative model 
+2. Neural Answer Selection Model (in progress)
+    - Variational inference framework for conditional generative model of text
+    - Combines a LSTM embeddings with an attention mechanism to extract the semantics between question and answer
+
 
 Prerequisites
 -------------
