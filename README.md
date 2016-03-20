@@ -31,9 +31,9 @@ Results
 
 Training details of NVDM. The best result can be achieved by onehost updates, not alternative updates.
 
-![scalar](2016-03-20-final-scalar.png)
+![scalar](./assets/2016-03-20-final-scalar.png)
 
-![histogram](2016-03-20-final-hist.png)
+![histogram](./assets/2016-03-20-final-hist.png)
 
 Author
 ------
