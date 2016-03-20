@@ -38,7 +38,11 @@ To test an existing model:
 Results
 -------
 
-![ptb_h_dim:50_embed_dim:500_max_iter:450000_batch_size:20_learning_rate:0.0003](./assets/training-2016-03-21.png)
+Training details of NVDM. The best result can be achieved by onehost updates, not alternative updates.
+
+![scalar](./assets/2016-03-20-final-scalar.png)
+
+![histogram](./assets/2016-03-20-final-hist.png)
 
 Author
 ------
