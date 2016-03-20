@@ -45,7 +45,7 @@ class NVDM(Model):
     self.build_decoder()
 
     # Kullback Leibler divergence
-    self.e_loss = -0.5 * tf.reduce_sum(self.h_dim + self.log_sigma_sq - tf.square(self.mu) - tf.exp(self.log_sigma_sq))
+    self.e_loss = -0.5 * tf.reduce_sum(1 + self.log_sigma_sq - tf.square(self.mu) - tf.exp(self.log_sigma_sq))
 
     # Log likelihood
     self.g_loss = -tf.reduce_sum(tf.log(tf.gather(self.p_x_i, self.x_idx) + 1e-10))
@@ -110,6 +110,11 @@ class NVDM(Model):
       _, e_loss, mu, sigma = self.sess.run(
           [self.optim_e, self.e_loss, self.mu, self.sigma], feed_dict={self.x: x})
 
+      _, g_loss, summary_str = self.sess.run(
+          [self.optim_g, self.g_loss, merged_sum], feed_dict={self.mu: mu,
+                                                              self.sigma: sigma,
+                                                              self.e_loss: e_loss,
+                                                              self.x_idx: x_idx})
       _, g_loss, summary_str = self.sess.run(
           [self.optim_g, self.g_loss, merged_sum], feed_dict={self.mu: mu,
                                                               self.sigma: sigma,
