@@ -29,6 +29,7 @@ class NVDM(Model):
 
     self.max_iter = max_iter
     self.decay_rate = decay_rate
+    self.decay_step = decay_step
     self.checkpoint_dir = checkpoint_dir
     self.step = tf.Variable(0, trainable=False)  
     self.learning_rate = tf.train.exponential_decay(
@@ -37,7 +38,8 @@ class NVDM(Model):
     _ = tf.scalar_summary("learning rate", self.learning_rate)
 
     self.dataset = dataset
-    self._attrs = ["h_dim", "embed_dim", "max_iter", "learning_rate", "dataset", "decay_rate"]
+    self._attrs = ["h_dim", "embed_dim", "max_iter", "dataset",
+                   "learning_rate", "decay_rate", "decay_step"]
 
     self.build_model()
 
@@ -63,10 +65,13 @@ class NVDM(Model):
       elif "generator" in var.name:
         self.generator_var_list.append(var)
 
-    #self.optim_e = tf.train.AdamOptimizer(learning_rate=self.learning_rate) \
-    #                     .minimize(self.e_loss, global_step=self.step, var_list=self.encoder_var_list)
-    #self.optim_g = tf.train.AdamOptimizer(learning_rate=self.learning_rate) \
-    #                     .minimize(self.g_loss, global_step=self.step, var_list=self.generator_var_list)
+    # optimizer for alternative update
+    self.optim_e = tf.train.AdamOptimizer(learning_rate=self.learning_rate) \
+                         .minimize(self.e_loss, global_step=self.step, var_list=self.encoder_var_list)
+    self.optim_g = tf.train.AdamOptimizer(learning_rate=self.learning_rate) \
+                         .minimize(self.g_loss, global_step=self.step, var_list=self.generator_var_list)
+
+    # optimizer for one shot update
     self.optim = tf.train.AdamOptimizer(learning_rate=self.learning_rate) \
                          .minimize(self.loss, global_step=self.step)
 
@@ -119,7 +124,8 @@ class NVDM(Model):
     for step in xrange(start_iter, start_iter + self.max_iter):
       x, x_idx = iterator.next()
 
-      """
+      """The paper update the parameters alternatively but in this repo I used oneshot update.
+
       _, e_loss, mu, sigma, h = self.sess.run(
           [self.optim_e, self.e_loss, self.mu, self.sigma, self.h], feed_dict={self.x: x})
 
@@ -130,6 +136,7 @@ class NVDM(Model):
                                                               self.e_loss: e_loss,
                                                               self.x_idx: x_idx})
       """
+
       _, loss, mu, sigma, h, summary_str = self.sess.run(
           [self.optim, self.loss, self.mu, self.sigma, self.h, merged_sum],
           feed_dict={self.x: x, self.x_idx: x_idx})
