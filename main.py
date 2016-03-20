@@ -9,7 +9,6 @@ from reader import TextReader
 flags = tf.app.flags
 flags.DEFINE_integer("max_iter", 450000, "Maximum of iteration [450000]")
 flags.DEFINE_float("learning_rate", 0.001, "Learning rate of for adam [0.001]")
-flags.DEFINE_integer("batch_size", 20, "The size of batch images [20]")
 flags.DEFINE_integer("embed_dim", 500, "The dimension of word embeddings [500]")
 flags.DEFINE_integer("h_dim", 50, "The dimension of latent variable [50]")
 flags.DEFINE_string("dataset", "ptb", "The name of dataset [ptb]")
@@ -27,12 +26,12 @@ def main(_):
   pp.pprint(flags.FLAGS.__flags)
 
   data_path = "./data/%s" % FLAGS.dataset
-  reader = TextReader(data_path, FLAGS.batch_size)
+  reader = TextReader(data_path)
 
   with tf.Session() as sess:
     m = MODELS[FLAGS.model]
     model = m(sess, reader, dataset=FLAGS.dataset,
-              batch_size=FLAGS.batch_size, embed_dim=FLAGS.embed_dim, h_dim=FLAGS.h_dim,
+              embed_dim=FLAGS.embed_dim, h_dim=FLAGS.h_dim,
               learning_rate=FLAGS.learning_rate, max_iter=FLAGS.max_iter,
               checkpoint_dir=FLAGS.checkpoint_dir)
 

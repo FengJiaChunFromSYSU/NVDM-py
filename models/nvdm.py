@@ -4,13 +4,14 @@ import tensorflow as tf
 
 from base import Model
 
+linear = tf.nn.rnn_cell.linear
+
 class NVDM(Model):
   """Neural Varational Document Model"""
 
   def __init__(self, sess, reader, dataset="ptb",
-               batch_size=20, embed_dim=500, h_dim=50,
-               learning_rate=0.001, max_iter=450000,
-               checkpoint_dir="checkpoint"):
+               embed_dim=500, h_dim=50, learning_rate=0.001,
+               max_iter=450000, checkpoint_dir="checkpoint"):
     """Initialize Neural Varational Document Model.
 
     params:
@@ -26,14 +27,13 @@ class NVDM(Model):
     self.embed_dim = embed_dim
 
     self.max_iter = max_iter
-    self.batch_size = batch_size
     self.learning_rate = learning_rate
     self.checkpoint_dir = checkpoint_dir
 
     self.step = tf.Variable(0, trainable=False)  
 
-    self.dataset = "ptb"
-    self._attrs = ["h_dim", "embed_dim", "max_iter", "batch_size", "learning_rate"]
+    self.dataset = dataset
+    self._attrs = ["h_dim", "embed_dim", "max_iter", "learning_rate", "dataset"]
 
     self.build_model()
 
@@ -42,7 +42,7 @@ class NVDM(Model):
     self.x_idx = tf.placeholder(tf.int32, [None], name="x_idx")
 
     self.build_encoder()
-    self.build_decoder()
+    self.build_generator()
 
     # Kullback Leibler divergence
     self.e_loss = -0.5 * tf.reduce_sum(1 + self.log_sigma_sq - tf.square(self.mu) - tf.exp(self.log_sigma_sq))
@@ -52,46 +52,52 @@ class NVDM(Model):
 
     self.loss = self.e_loss + self.g_loss
 
-    encoder_var_list, decoder_var_list = [], []
+    self.encoder_var_list, self.generator_var_list = [], []
     for var in tf.trainable_variables():
       if "encoder" in var.name:
-        encoder_var_list.append(var)
-      elif "decoder" in var.name:
-        decoder_var_list.append(var)
+        self.encoder_var_list.append(var)
+      elif "generator" in var.name:
+        self.generator_var_list.append(var)
 
     self.optim_e = tf.train.AdamOptimizer(learning_rate=self.learning_rate) \
-                         .minimize(self.e_loss, global_step=self.step, var_list=encoder_var_list)
+                         .minimize(self.e_loss, global_step=self.step, var_list=self.encoder_var_list)
     self.optim_g = tf.train.AdamOptimizer(learning_rate=self.learning_rate) \
-                         .minimize(self.g_loss, global_step=self.step, var_list=decoder_var_list)
+                         .minimize(self.g_loss, global_step=self.step, var_list=self.generator_var_list)
 
     _ = tf.scalar_summary("encoder loss", self.e_loss)
-    _ = tf.scalar_summary("decoder loss", self.g_loss)
+    _ = tf.scalar_summary("generator loss", self.g_loss)
     _ = tf.scalar_summary("total loss", self.loss)
 
   def build_encoder(self):
     """Inference Network. q(h|X)"""
     with tf.variable_scope("encoder"):
-      l1 = tf.nn.relu(tf.nn.rnn_cell.linear(tf.expand_dims(self.x, 0), self.embed_dim, bias=True, scope="l1"))
-      l2 = tf.nn.relu(tf.nn.rnn_cell.linear(l1, self.embed_dim, bias=True, scope="l2"))
+      self.l1_lin = linear(tf.expand_dims(self.x, 0), self.embed_dim, bias=True, scope="l1")
+      self.l1 = tf.nn.relu(self.l1_lin)
 
-      self.mu = tf.nn.rnn_cell.linear(l2, self.h_dim, bias=True, scope="mu")
-      self.log_sigma_sq = tf.nn.rnn_cell.linear(l2, self.h_dim, bias=True, scope="log_sigma_sq")
+      self.l2_lin = linear(self.l1, self.embed_dim, bias=True, scope="l2")
+      self.l2 = tf.nn.relu(self.l2_lin)
 
-      eps = tf.random_normal((1, self.h_dim), 0, 1, dtype=tf.float32)
+      self.mu = linear(self.l2, self.h_dim, bias=True, scope="mu")
+      self.log_sigma_sq = linear(self.l2, self.h_dim, bias=True, scope="log_sigma_sq")
+
+      self.eps = tf.random_normal((1, self.h_dim), 0, 1, dtype=tf.float32)
       self.sigma = tf.sqrt(tf.exp(self.log_sigma_sq))
 
-      self.h = self.mu + self.sigma * eps
+      self.h = tf.add(self.mu, tf.mul(self.sigma, self.eps))
 
-  def build_decoder(self):
+      _ = tf.histogram_summary("mu", self.mu)
+      _ = tf.histogram_summary("sigma", self.sigma)
+      _ = tf.histogram_summary("h", self.h)
+      _ = tf.histogram_summary("mu + sigma", self.mu + self.sigma)
+
+  def build_generator(self):
     """Inference Network. p(X|h)"""
-    with tf.variable_scope("decoder"):
-      R = tf.get_variable("R", [self.reader.vocab_size, self.h_dim])
-      b = tf.get_variable("b", [self.reader.vocab_size])
+    with tf.variable_scope("generator"):
+      self.R = tf.get_variable("R", [self.reader.vocab_size, self.h_dim])
+      self.b = tf.get_variable("b", [self.reader.vocab_size])
 
-      x_i = tf.diag([1.]*self.reader.vocab_size)
-
-      e = -tf.matmul(tf.matmul(self.h, R, transpose_b=True), x_i) + b
-      self.p_x_i = tf.squeeze(tf.nn.softmax(e))
+      self.e = -tf.matmul(self.h, self.R, transpose_b=True) + self.b
+      self.p_x_i = tf.squeeze(tf.nn.softmax(self.e))
 
   def train(self, config):
     merged_sum = tf.merge_all_summaries()
@@ -103,18 +109,13 @@ class NVDM(Model):
     start_time = time.time()
     start_iter = self.step.eval()
 
-    iterator = self.reader.next_batch()
+    iterator = self.reader.iterator()
     for step in xrange(start_iter, start_iter + self.max_iter):
       x, x_idx = iterator.next()
 
       _, e_loss, mu, sigma = self.sess.run(
           [self.optim_e, self.e_loss, self.mu, self.sigma], feed_dict={self.x: x})
 
-      _, g_loss, summary_str = self.sess.run(
-          [self.optim_g, self.g_loss, merged_sum], feed_dict={self.mu: mu,
-                                                              self.sigma: sigma,
-                                                              self.e_loss: e_loss,
-                                                              self.x_idx: x_idx})
       _, g_loss, summary_str = self.sess.run(
           [self.optim_g, self.g_loss, merged_sum], feed_dict={self.mu: mu,
                                                               self.sigma: sigma,
@@ -131,9 +132,14 @@ class NVDM(Model):
       if step % 500 == 0:
         self.save(self.checkpoint_dir, step)
 
-        self.sample(3, "costs")
-        self.sample(3, "chemical company")
-        self.sample(3, "government violated")
+        if self.dataset == "ptb":
+          self.sample(3, "costs")
+          self.sample(3, "chemical company")
+          self.sample(3, "government violated")
+        elif self.dataset == "toy":
+          self.sample(3, "a")
+          self.sample(3, "g")
+          self.sample(3, "k")
 
   def sample(self, sample_size=20, text=None):
     """Sample the documents."""

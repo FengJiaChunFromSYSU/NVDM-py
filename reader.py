@@ -1,4 +1,5 @@
 import os
+import itertools
 import numpy as np
 import tensorflow as tf
 
@@ -6,11 +7,10 @@ from utils import *
 from collections import Counter
 from nltk.tokenize import TreebankWordTokenizer
 
-class TextReader(object):
-  def __init__(self, data_path, batch_size, num_steps=1):
-    self.batch_size = batch_size
-    self.num_steps = num_steps
+EOS_TOKEN = "_eos_"
 
+class TextReader(object):
+  def __init__(self, data_path):
     train_path = os.path.join(data_path, "train.txt")
     valid_path = os.path.join(data_path, "valid.txt")
     test_path = os.path.join(data_path, "test.txt")
@@ -29,10 +29,10 @@ class TextReader(object):
 
   def _read_text(self, file_path):
     with open(file_path) as f:
-      return f.read().replace("\n", "<eos>").split()
+      return f.read().replace("\n", " %s " % EOS_TOKEN)
 
   def _build_vocab(self, file_path, vocab_path):
-    counter = Counter(self._read_text(file_path))
+    counter = Counter(self._read_text(file_path).split())
 
     count_pairs = sorted(counter.items(), key=lambda x: (-x[1], x[0]))
     words, _ = list(zip(*count_pairs))
@@ -41,8 +41,10 @@ class TextReader(object):
     save_pkl(vocab_path, self.vocab)
 
   def _file_to_data(self, file_path):
-    text = self._read_text(file_path)
-    data = np.array(map(self.vocab.get, text))
+    texts = self._read_text(file_path).split(EOS_TOKEN)
+    data = []
+    for text in texts:
+      data.append(np.array(map(self.vocab.get, text.split())))
 
     save_npy(file_path + ".npy", data)
     return data
@@ -54,7 +56,7 @@ class TextReader(object):
     self.valid_data = load_npy(valid_path + ".npy")
     self.test_data = load_npy(test_path + ".npy")
 
-  def next_batch(self, data_type="train"):
+  def get_data_from_type(self, data_type):
     if data_type == "train":
       raw_data = self.train_data
     elif data_type == "valid":
@@ -64,16 +66,16 @@ class TextReader(object):
     else:
       raise Exception(" [!] Unkown data type %s: %s" % data_type)
 
-    idx = 0
-    while True:
-      try:
-        data = raw_data[self.batch_size*idx:self.batch_size*(idx+1)]
-        yield np.bincount(data, minlength=self.vocab_size), data
-      except:
-        idx = 0
-        data = raw_data[self.batch_size*idx:self.batch_size*(idx+1)]
-        yield np.bincount(data, minlength=self.vocab_size), data
-      idx += 1
+    return raw_data
+
+  def onehot(self, data, min_length=None):
+    if min_length == None:
+      min_length = self.vocab_size
+    return np.bincount(data, minlength=min_length)
+
+  def iterator(self, data_type="train"):
+    raw_data = self.get_data_from_type(data_type)
+    return itertools.cycle(([self.onehot(data), data] for data in raw_data if data != []))
 
   def get(self, text=["medical"]):
     if type(text) == str:
@@ -82,7 +84,7 @@ class TextReader(object):
 
     try:
       data = np.array(map(self.vocab.get, text))
-      return np.bincount(data, minlength=self.vocab_size), data
+      return self.onehot(data), data
     except:
       unknowns = []
       for word in text:
@@ -91,17 +93,8 @@ class TextReader(object):
       raise Exception(" [!] unknown words: %s" % ",".join(unknowns))
 
   def random(self, data_type="train"):
-    if data_type == "train":
-      raw_data = self.train_data
-    elif data_type == "valid":
-      raw_data = self.valid_data
-    elif data_type == "test":
-      raw_data = self.test_data
-    else:
-      raise Exception(" [!] Unkown data type %s: %s" % data_type)
+    raw_data = self.get_data_from_type(data_type)
+    idx = np.random.randint(len(raw_data))
 
-    self.batch_cnt = len(raw_data) // self.batch_size
-    idx = np.random.randint(self.batch_cnt)
-
-    data = raw_data[self.batch_size*idx:self.batch_size*(idx+1)]
-    return np.bincount(data, minlength=self.vocab_size), data
+    data = raw_data[idx]
+    return self.onehot(data), data
