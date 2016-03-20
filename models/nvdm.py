@@ -63,10 +63,12 @@ class NVDM(Model):
       elif "generator" in var.name:
         self.generator_var_list.append(var)
 
-    self.optim_e = tf.train.AdamOptimizer(learning_rate=self.learning_rate) \
-                         .minimize(self.e_loss, global_step=self.step, var_list=self.encoder_var_list)
-    self.optim_g = tf.train.AdamOptimizer(learning_rate=self.learning_rate) \
-                         .minimize(self.g_loss, global_step=self.step, var_list=self.generator_var_list)
+    #self.optim_e = tf.train.AdamOptimizer(learning_rate=self.learning_rate) \
+    #                     .minimize(self.e_loss, global_step=self.step, var_list=self.encoder_var_list)
+    #self.optim_g = tf.train.AdamOptimizer(learning_rate=self.learning_rate) \
+    #                     .minimize(self.g_loss, global_step=self.step, var_list=self.generator_var_list)
+    self.optim = tf.train.AdamOptimizer(learning_rate=self.learning_rate) \
+                         .minimize(self.loss, global_step=self.step)
 
     _ = tf.scalar_summary("encoder loss", self.e_loss)
     _ = tf.scalar_summary("generator loss", self.g_loss)
@@ -117,6 +119,7 @@ class NVDM(Model):
     for step in xrange(start_iter, start_iter + self.max_iter):
       x, x_idx = iterator.next()
 
+      """
       _, e_loss, mu, sigma, h = self.sess.run(
           [self.optim_e, self.e_loss, self.mu, self.sigma, self.h], feed_dict={self.x: x})
 
@@ -126,13 +129,19 @@ class NVDM(Model):
                                                               self.sigma: sigma,
                                                               self.e_loss: e_loss,
                                                               self.x_idx: x_idx})
+      """
+      _, loss, mu, sigma, h, summary_str = self.sess.run(
+          [self.optim, self.loss, self.mu, self.sigma, self.h, merged_sum],
+          feed_dict={self.x: x, self.x_idx: x_idx})
 
       if step % 2 == 0:
         writer.add_summary(summary_str, step)
 
       if step % 10 == 0:
-        print("Step: [%4d/%4d] time: %4.4f, loss: %.8f, e_loss: %.8f, g_loss: %.8f" \
-            % (step, self.max_iter, time.time() - start_time, e_loss + g_loss, e_loss, g_loss))
+        print("Step: [%4d/%4d] time: %4.4f, loss: %.8f" \
+            % (step, self.max_iter, time.time() - start_time, loss))
+        #print("Step: [%4d/%4d] time: %4.4f, loss: %.8f, e_loss: %.8f, g_loss: %.8f" \
+        #    % (step, self.max_iter, time.time() - start_time, e_loss + g_loss, e_loss, g_loss))
 
       if step % 500 == 0:
         self.save(self.checkpoint_dir, step)
