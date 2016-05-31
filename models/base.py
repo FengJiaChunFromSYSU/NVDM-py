@@ -11,7 +11,7 @@ class Model(object):
     model_dir = self.dataset
     for attr in self._attrs:
       if hasattr(self, attr):
-        model_dir += "_%s:%s" % (attr, getattr(self, attr))
+        model_dir += "_%s=%s" % (attr, getattr(self, attr))
     return model_dir
 
   def save(self, checkpoint_dir, global_step=None):
