@@ -4,7 +4,10 @@ import tensorflow as tf
 
 from base import Model
 
-linear = tf.nn.rnn_cell.linear
+try:
+  linear = tf.nn.rnn_cell.linear
+except:
+  from tensorflow.python.ops.rnn_cell import _linear as linear
 
 class NVDM(Model):
   """Neural Varational Document Model"""
@@ -32,10 +35,10 @@ class NVDM(Model):
     self.decay_step = decay_step
     self.checkpoint_dir = checkpoint_dir
     self.step = tf.Variable(0, trainable=False)  
-    self.learning_rate = tf.train.exponential_decay(
+    self.lr = tf.train.exponential_decay(
         learning_rate, self.step, 10000, decay_rate, staircase=True, name="lr")
 
-    _ = tf.scalar_summary("learning rate", self.learning_rate)
+    _ = tf.scalar_summary("learning rate", self.lr)
 
     self.dataset = dataset
     self._attrs = ["h_dim", "embed_dim", "max_iter", "dataset",
@@ -66,13 +69,13 @@ class NVDM(Model):
         self.generator_var_list.append(var)
 
     # optimizer for alternative update
-    self.optim_e = tf.train.AdamOptimizer(learning_rate=self.learning_rate) \
+    self.optim_e = tf.train.AdamOptimizer(learning_rate=self.lr) \
                          .minimize(self.e_loss, global_step=self.step, var_list=self.encoder_var_list)
-    self.optim_g = tf.train.AdamOptimizer(learning_rate=self.learning_rate) \
+    self.optim_g = tf.train.AdamOptimizer(learning_rate=self.lr) \
                          .minimize(self.g_loss, global_step=self.step, var_list=self.generator_var_list)
 
     # optimizer for one shot update
-    self.optim = tf.train.AdamOptimizer(learning_rate=self.learning_rate) \
+    self.optim = tf.train.AdamOptimizer(learning_rate=self.lr) \
                          .minimize(self.loss, global_step=self.step)
 
     _ = tf.scalar_summary("encoder loss", self.e_loss)
